@@ -1,0 +1,27 @@
+
+.containerDrawing {
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 10px;
+}
+
+.containerColorButtons {
+    display: flex; 
+    gap: 5px;
+}
+
+.buttonColor {
+    width: 30px;
+    height: 30px;
+    /* background-color: color; */
+    /* border: 1px solid gray; */
+    cursor: pointer;
+}
+
+.canvasDrawing {
+    border: 1px solid #333;
+    cursor: crosshair;
+    /* Pixelated garante que o navegador não tente "borrar" os pixels */
+    image-rendering: 'pixelated'; 
+}

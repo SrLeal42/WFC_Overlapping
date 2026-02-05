@@ -1,35 +1,39 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+
+import * as C from './constants/Constants';
+
+import { DrawingCanvas } from './components/DrawingCanvas';
+// import { BabylonScene } from './components/BabylonScene'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [wfcInput, setWfcInput] = useState<C.ColorGrid | null>(null);
 
   return (
-    <>
+    <div style={{ display: 'flex', gap: '50px', padding: '20px' }}>
+      
+      {/* Lado Esquerdo: O Input */}
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <h2>1. Desenhe aqui</h2>
+        <DrawingCanvas 
+          onGridChange={(grid) => {
+            // Essa função roda toda vez que você solta o mouse
+            setWfcInput([...grid]); // O ... cria uma cópia para o React detectar mudança
+            console.log("Matriz atualizada:", grid); 
+          }} 
+        />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+
+      {/* Lado Direito: Debug (só pra ver se funcionou) */}
+      <div>
+        <h2>2. Dados (Debug)</h2>
+        <p>Abra o console do navegador (F12) para ver a matriz gerada.</p>
+        <div style={{ fontFamily: 'monospace', fontSize: '10px', whiteSpace: 'pre' }}>
+            {wfcInput ? "Matriz carregada na memória!" : "Desenhe algo..."}
+        </div>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+
+    </div>
+  );
 }
 
-export default App
+export default App;
