@@ -2,7 +2,7 @@ import * as B from "@babylonjs/core";
 
 import * as C from '../constants/Constants';
 
-import { Cell } from "./Cell";
+import { Cell } from "../wfc/Cell";
 
 export class OverlappingScene {
     scene: B.Scene;
