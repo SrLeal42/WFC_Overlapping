@@ -1,17 +1,22 @@
 import { useEffect, useRef } from "react";
-import { Engine, Scene } from "@babylonjs/core";
-import { CreateOverlappingScene } from "../scenes/OverlappingScene";
+import { Engine } from "@babylonjs/core";
+import { OverlappingScene } from "../scenes/OverlappingScene";
 
-import styles from "../styles/Babylon.module.css";
+import * as C from '../constants/Constants';
+
+// import styles from "../styles/Babylon.module.css";
 
 export function BabylonScene() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlappingSceneRef = useRef<OverlappingScene | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     const engine = new Engine(canvasRef.current, true);
-    const scene: Scene = CreateOverlappingScene(engine);
+    const scene: OverlappingScene = new OverlappingScene(engine);
+
+    overlappingSceneRef.current = scene;
 
     engine.runRenderLoop(() => {
       scene.render();
@@ -22,9 +27,10 @@ export function BabylonScene() {
 
     return () => {
       window.removeEventListener("resize", resize);
+      scene.dispose();
       engine.dispose();
     };
   }, []);
 
-  return <canvas ref={canvasRef} className={styles.babylonCanvas} />;
+  return <canvas ref={canvasRef} /*className={styles.babylonCanvas}*/ style={{ width: C.BABYLON_CANVAS_SIZE, height: C.BABYLON_CANVAS_SIZE}} />;
 }
