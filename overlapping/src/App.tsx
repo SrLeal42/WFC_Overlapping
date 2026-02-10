@@ -5,11 +5,13 @@ import * as C from './constants/Constants';
 import { DrawingCanvas } from './components/DrawingCanvas';
 import { BabylonScene } from './components/BabylonScene'
 
+import { type WFCModelData } from "./interfaces/WFCModelData";
 import { BuildWFCModel } from './wfc/PatternBuilder';
 
 function App() {
   const [inputGrid, setInputGrid] = useState<C.ColorGrid | null>(null);
-  
+  const [wfcModel, setWfcModel] = useState<WFCModelData | null>(null);
+
   const HandlePatternBuilder = () => {
 
     if (!inputGrid) {
@@ -18,17 +20,13 @@ function App() {
     }
 
     console.log("--- INICIANDO BUILDER ---");
-    
     // 2. Chama a função que criamos
     // O N=3 é o padrão, mas você pode passar 2 ou 4 se quiser testar
     const model = BuildWFCModel(inputGrid, 3);
 
     // 3. Mostra o resultado no console para validarmos
     console.log("MODELO GERADO COM SUCESSO:");
-    console.log("Padrões Únicos encontrados:", model.patterns.length);
-    console.log("Objeto Completo:", model);
-    console.log("Regras de Adjacência:", model.rules);
-    console.log("-------------------------");
+    setWfcModel(model);
   };
 
   return (
@@ -57,7 +55,7 @@ function App() {
                     borderRadius: '5px'
                 }}
             > 
-              GERAR REGRAS (Console)
+              GERAR REGRAS
             </button>
         </div>
 
@@ -67,7 +65,7 @@ function App() {
       <div>
         <h2>2. Dados (Debug)</h2>
         <p>Abra o console do navegador (F12) para ver a matriz gerada.</p>
-        <BabylonScene />
+        <BabylonScene wfcData={wfcModel}/>
       </div>
 
     </div>

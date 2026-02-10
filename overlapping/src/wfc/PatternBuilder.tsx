@@ -60,7 +60,7 @@ export function BuildWFCModel(inputGrid: string[][], N: number = 3): WFCModelDat
         weights.push(normalized);
     });
 
-    console.log(`[WFC Builder] Encontrados ${patterns.length} padrões únicos.`);
+    // console.log(`[WFC Builder] Encontrados ${patterns.length} padrões únicos.`);
 
     // 3. Calcular Regras de Sobreposição (Adjacency Rules)
     // Compara cada padrão com todos os outros para ver se encaixam
