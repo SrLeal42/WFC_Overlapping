@@ -1,9 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 import styles from "../styles/Drawing.module.css";
 
 import * as C from '../constants/Constants';
+import * as DrawUtils from '../drawing/DrawingUtils';
+import * as Painter from '../drawing/CanvasPainter';
 
+// ICONS
+import ClearToolIcon from '../assets/react.svg?react';
 
 
 interface Props {
@@ -16,12 +20,10 @@ export const DrawingCanvas: React.FC<Props> = ({ onGridChange }) => {
   // REFERÊNCIAS
   // O useRef guarda valores que não precisam fazer a tela renderizar de novo quando mudam
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+
   // Aqui guardamos os dados "puros" da grade na memória
   // Criamos um Array de 20 linhas, onde cada linha é um Array de 20 cores brancas
-  const gridDataRef = useRef<C.ColorGrid>(
-    Array(C.DRAW_GRID_SIZE).fill(null).map(() => Array(C.DRAW_GRID_SIZE).fill(C.DEFAULT_COLOR))
-  );
+  const gridDataRef = useRef<C.ColorGrid>(DrawUtils.CreateEmptyGrid());
 
   // ESTADOS
   // isDrawing: Verdadeiro se o mouse estiver clicado e arrastando
@@ -29,73 +31,195 @@ export const DrawingCanvas: React.FC<Props> = ({ onGridChange }) => {
   // Cor atual selecionada (começa com preto)
   const [selectedColor, setSelectedColor] = useState<string>(C.ALL_COLORS[0]);
 
-  // EFEITO INICIAL
-  // Roda uma vez quando o componente nasce para pintar o fundo de branco
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const [currentTool, setCurrentTool] = useState<C.ToolType>('pencil');
 
-    // Pinta tudo de branco inicialmente
-    ctx.fillStyle = C.DEFAULT_COLOR;
-    ctx.fillRect(0, 0, C.DRAW_CANVAS_SIZE, C.DRAW_CANVAS_SIZE);
+  // --- SISTEMA DE HISTÓRICO ---
+  // Começamos com um histórico contendo a grade vazia
+  const [history, setHistory] = useState<C.ColorGrid[]>([DrawUtils.CreateEmptyGrid()]);
+  const [historyStep, setHistoryStep] = useState(0);
+
+  const getContext = () => canvasRef.current?.getContext('2d');
+
+  const SaveToHistory = () => {
+    const newHistory = history.slice(0, historyStep + 1);
     
-    // Avisa o pai do estado inicial
-    onGridChange(gridDataRef.current);
-  }, []);
-
-  // --- A LÓGICA DE DESENHO ---
-  
-  const PaintPixel = (mouseX: number, mouseY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // 1. Descobrir em qual coordenada da grade (0-19) estamos
-    // getBoundingClientRect pega a posição exata do canvas na tela do navegador
-    const rect = canvas.getBoundingClientRect();
+    const currentGridState = DrawUtils.CloneGrid(gridDataRef.current);
     
-    // Matemática: (Posição Mouse - Onde começa o canvas) / Tamanho do bloquinho
-    const x = Math.floor((mouseX - rect.left) / C.DRAW_PIXEL_SCALE);
-    const y = Math.floor((mouseY - rect.top) / C.DRAW_PIXEL_SCALE);
+    newHistory.push(currentGridState);
+    
+    setHistory(newHistory);
+    setHistoryStep(newHistory.length - 1);
+    
+    onGridChange(currentGridState);
+  };
 
-    // Verificação de segurança: Estamos dentro do limite 20x20?
-    if (x >= 0 && x < C.DRAW_GRID_SIZE && y >= 0 && y < C.DRAW_GRID_SIZE) {
+
+  // --- EVENT HANDLERS ---
+  const HandleFloodFill = (x: number, y: number) => {
+      const ctx = getContext();
+      if (!ctx) return;
       
-      // 2. Atualizar a MEMÓRIA (Nossa matriz)
-      gridDataRef.current[y][x] = selectedColor;
+      // Chama a função externa para fazer o trabalho sujo
+      Painter.FloodFill(ctx, gridDataRef.current, x, y, selectedColor);
+      
+      // Só salva no histórico, pois o Painter já atualizou o visual e a ref
+      SaveToHistory();
+  };
 
-      // 3. Atualizar o VISUAL (O Canvas)
-      ctx.fillStyle = selectedColor;
-      // fillRect(posicaoX, posicaoY, largura, altura)
-      ctx.fillRect(x * C.DRAW_PIXEL_SCALE, y * C.DRAW_PIXEL_SCALE, C.DRAW_PIXEL_SCALE, C.DRAW_PIXEL_SCALE);
+
+
+  // --- EVENTOS DO MOUSE ---
+const HandleMouseDown = (e: React.MouseEvent) => {
+    if (!canvasRef.current) return;
+    const coords = DrawUtils.GetMouseCoords(e, canvasRef.current);
+    
+    if (!coords) return;
+
+    if (currentTool === 'bucket') {
+      HandleFloodFill(coords.x, coords.y);
+    } else {
+      setIsDrawing(true);
+      // Pinta o primeiro pixel
+      const ctx = getContext();
+      if (ctx) {
+          gridDataRef.current[coords.y][coords.x] = selectedColor;
+          Painter.PaintPixel(ctx, coords.x, coords.y, selectedColor);
+      }
     }
   };
 
-  // --- EVENTOS DO MOUSE ---
-
-  const HandleMouseDown = (e: React.MouseEvent) => {
-    setIsDrawing(true); // Começou a clicar
-    PaintPixel(e.clientX, e.clientY); // Pinta o primeiro pixel
-  };
-
   const HandleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing) return; // Se não estiver segurando o clique, não faz nada
-    PaintPixel(e.clientX, e.clientY); // Pinta enquanto arrasta
+    if (!isDrawing || currentTool === 'bucket' || !canvasRef.current) return;
+    
+    const coords = DrawUtils.GetMouseCoords(e, canvasRef.current);
+    const ctx = getContext();
+
+    if(coords && ctx) {
+        gridDataRef.current[coords.y][coords.x] = selectedColor;
+        Painter.PaintPixel(ctx, coords.x, coords.y, selectedColor);
+    }
   };
 
   const HandleMouseUp = () => {
     // Agora que o usuário terminou o traço, avisamos o componente Pai
-    if (isDrawing) onGridChange(gridDataRef.current);
+    if (isDrawing) SaveToHistory();
 
     setIsDrawing(false); // Soltou o clique
     
   };
 
+
+  const HandleClearDraw = () => {
+    const ctx = getContext();
+    if (!ctx) return;
+
+    gridDataRef.current = DrawUtils.CreateEmptyGrid();
+    
+    // Usa o Painter para limpar visualmente (ou redesenhar a grid vazia)
+    Painter.RedrawCanvas(ctx, gridDataRef.current);
+    
+    SaveToHistory();
+  }
+
+  // --- FUNÇÃO: UNDO (Desfazer) ---
+  const HandleUndo = useCallback(() => {
+    if (historyStep === 0) return;
+
+    const previousStep = historyStep - 1;
+    const previousGrid = history[previousStep];
+
+    // Atualiza Referência Lógica
+    gridDataRef.current = DrawUtils.CloneGrid(previousGrid);
+    
+    // Atualiza Visual (Delega para o Painter)
+    const ctx = getContext();
+    if (ctx) Painter.RedrawCanvas(ctx, previousGrid);
+
+    setHistoryStep(previousStep);
+    onGridChange(previousGrid);
+  }, [historyStep, history, onGridChange]);
+
+
+
+
+  // Inicialização
+  useEffect(() => {
+    const ctx = getContext();
+    if (ctx) {
+        // Pinta fundo inicial
+        Painter.RedrawCanvas(ctx, gridDataRef.current);
+        onGridChange(gridDataRef.current);
+    }
+  }, []);
+
+  // Atalho Teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        HandleUndo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [HandleUndo]);
+
+
+
+
   return (
-    <div className={styles.containerDrawing} >
+    <div 
+      className={styles.containerDrawing} 
+      style={{cursor: currentTool === 'bucket' ? 'cell' : 'crosshair'}}
+      >
+
+      <div className={styles.containerToolsButtons} >
+ 
+        <button
+          onClick={HandleClearDraw}
+          className={styles.buttonTool}
+        >
+        <ClearToolIcon className={styles.iconTool}/>
+        </button>
+        
+        <button 
+          onClick={HandleUndo} 
+          className={styles.buttonTool} 
+          title="Desfazer (Ctrl+Z)"
+          disabled={historyStep === 0} // Desabilita se não tiver o que desfazer
+          style={{ opacity: historyStep === 0 ? 0.5 : 1 }}
+        >
+          ↩️
+        </button>
+
+        <button 
+            onClick={() => setCurrentTool('pencil')} 
+            className={styles.buttonTool}
+            style={{ border: currentTool === 'pencil' ? '2px solid gold' : '1px solid gray' }}
+        >
+            ✏️
+        </button>
+        
+        <button 
+            onClick={() => setCurrentTool('bucket')} 
+            className={styles.buttonTool}
+            style={{ border: currentTool === 'bucket' ? '2px solid gold' : '1px solid gray' }}
+        >
+            🪣
+        </button>
+
+      </div>
+
+      <canvas
+        ref={canvasRef}
+        width={C.DRAW_CANVAS_SIZE}
+        height={C.DRAW_CANVAS_SIZE}
+        onMouseDown={HandleMouseDown}
+        onMouseMove={HandleMouseMove}
+        onMouseUp={HandleMouseUp}
+        onMouseLeave={HandleMouseUp} // Se o mouse sair do canvas, para de desenhar
+        className={styles.canvasDrawing}
+      />
 
       <div className={styles.containerColorButtons}>
         {C.ALL_COLORS.map(color => (
@@ -111,16 +235,6 @@ export const DrawingCanvas: React.FC<Props> = ({ onGridChange }) => {
         ))}
       </div>
 
-      <canvas
-        ref={canvasRef}
-        width={C.DRAW_CANVAS_SIZE}
-        height={C.DRAW_CANVAS_SIZE}
-        onMouseDown={HandleMouseDown}
-        onMouseMove={HandleMouseMove}
-        onMouseUp={HandleMouseUp}
-        onMouseLeave={HandleMouseUp} // Se o mouse sair do canvas, para de desenhar
-        className={styles.canvasDrawing}
-      />
 
     </div>
   );

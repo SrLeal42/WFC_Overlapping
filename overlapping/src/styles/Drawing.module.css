@@ -6,6 +6,24 @@
     gap: 10px;
 }
 
+.containerToolsButtons {
+    display: flex; 
+    gap: 5px;
+}
+
+.buttonTool {
+    width: 35px;
+    height: 35px;
+    background-color: gray;
+    /* border: 1px solid gray; */
+    cursor: pointer;
+}
+
+.iconTool{
+    width: 100%;
+    height: 100%;
+}
+
 .containerColorButtons {
     display: flex; 
     gap: 5px;
@@ -21,7 +39,7 @@
 
 .canvasDrawing {
     border: 1px solid #333;
-    cursor: crosshair;
+    /* cursor: crosshair; */
     /* Pixelated garante que o navegador não tente "borrar" os pixels */
     image-rendering: 'pixelated'; 
 }

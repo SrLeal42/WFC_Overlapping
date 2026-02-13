@@ -1,4 +1,5 @@
 export * from './types/Color.type';
+export * from './types/Tools.type';
 
 export * from './values/Colors.values';
 export * from './values/Drawing.values';

@@ -108,11 +108,12 @@ export class Cell {
         }
 
         // Se chegou a 0, temos uma CONTRADIÇÃO (Bug no algoritmo ou beco sem saída)
-        // if (this.possibleTiles.size === 0) {
-        //     // console.warn(`Contradição na célula ${this.x}, ${this.y}`);
-        //     // Aqui poderíamos pintar de roxo ou reiniciar
-        //     this.material.emissiveColor = B.Color3.Magenta(); 
-        // }
+        if (this.possibleTiles.size === 0) {
+            console.warn(`Contradição na célula ${this.x}, ${this.y}`);
+            // Aqui poderíamos pintar de roxo ou reiniciar
+            const c = B.Color3.Magenta();
+            this.currentColor.set(c.r, c.g, c.b, 1);
+        }
 
         return changed;
     }
