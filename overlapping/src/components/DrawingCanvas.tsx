@@ -46,7 +46,11 @@ export const DrawingCanvas: React.FC<Props> = ({ onGridChange }) => {
     const currentGridState = DrawUtils.CloneGrid(gridDataRef.current);
     
     newHistory.push(currentGridState);
+    // Remove o item mais antigo (o primeiro)
+    if (newHistory.length > C.MAX_HISTORY_STEPS) newHistory.shift(); 
     
+        
+
     setHistory(newHistory);
     setHistoryStep(newHistory.length - 1);
     
